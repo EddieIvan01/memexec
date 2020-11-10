@@ -1,0 +1,17 @@
+[package]
+name = "memexec"
+version = "0.1.0"
+authors = ["iv4n <iv4n.cc@qq.com>"]
+edition = "2018"
+description = "Lib used to load and execute PE (Portable Executable) in memory without ever touching the disk"
+git = "https://github.com/eddieivan01/memexec.git"
+license = "GPL-3.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+incremental = false
