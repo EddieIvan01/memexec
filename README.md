@@ -13,8 +13,11 @@ Lib used to load and execute PE (Portable Executable) in memory without ever tou
 
 # Install
 
-```
-cargo install memexec
+```toml
+# Cargo.toml
+
+[dependencies]
+memexec = "0.1"
 ```
 
 # Usage
