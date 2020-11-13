@@ -35,28 +35,28 @@ pub const PAGE_EXECUTE_READ: DWORD = 0x20;
 pub const PAGE_EXECUTE_READWRITE: DWORD = 0x40;
 */
 impl IMAGE_SECTION_HEADER {
+    #[inline]
     pub fn can_read(&self) -> bool {
-        self.Characteristics & IMAGE_SCN_MEM_READ == IMAGE_SCN_MEM_READ
+        self.Characteristics & IMAGE_SCN_MEM_READ != 0
     }
 
+    #[inline]
     pub fn can_write(&self) -> bool {
-        self.Characteristics & IMAGE_SCN_MEM_WRITE == IMAGE_SCN_MEM_WRITE
+        self.Characteristics & IMAGE_SCN_MEM_WRITE != 0
     }
 
+    #[inline]
     pub fn can_exec(&self) -> bool {
-        self.Characteristics & IMAGE_SCN_MEM_EXECUTE == IMAGE_SCN_MEM_EXECUTE
+        self.Characteristics & IMAGE_SCN_MEM_EXECUTE != 0
     }
 
-    pub fn protect_value(&self) -> DWORD {
+    pub fn get_protection(&self) -> DWORD {
         match self.can_exec() {
             true => match self.can_read() {
-                true => {
-                    if self.can_write() {
-                        PAGE_EXECUTE_READWRITE
-                    } else {
-                        PAGE_EXECUTE_READ
-                    }
-                }
+                true => match self.can_write() {
+                    true => PAGE_EXECUTE_READWRITE,
+                    false => PAGE_EXECUTE_READ,
+                },
                 false => PAGE_EXECUTE,
             },
             false => match self.can_read() {

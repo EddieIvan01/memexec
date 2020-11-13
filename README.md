@@ -2,14 +2,14 @@
 
 [![](https://img.shields.io/crates/v/memexec)](https://crates.io/crates/memexec) [![](https://img.shields.io/crates/d/memexec?label=downloads%40crates.io&style=social)](https://crates.io/crates/memexec)
 
-Lib used to load and execute PE (Portable Executable) in memory without ever touching the disk
+A library for loading and executing PE (Portable Executable) without ever touching the disk
 
 # Features
 
-+ Applicable to EXE and DLL
-+ Cross-architecture, applicable to x86 and x86_64
++ Applicable to EXE and DLL (except .NET assembly)
++ Cross-architecture, applicable to x86 and x86-64
 + Zero-dependency
-+ Contains a zero-copy submodule of PE parser
++ Contains a simple, zero-copy PE parser submodule
 
 # Install
 
@@ -75,6 +75,12 @@ use memexec::peparser::PE;
 let pe = PE::new(&buf);
 println!("{:?}", pe);
 ```
+
+# TODO
+
+- [ ] Replace `LoadLibrary` with calling `load_pe_into_mem` recursively
+
+- [ ] Replace `GetProcAddress` with self-implemented [`LdrpSnapThunk`](https://doxygen.reactos.org/dd/d83/ntdllp_8h.html#ae2196bc7f46cc2a92d36b7c4881ee633), so as to support resolving proc address by `IMAGE_IMPORT_BY_NAME.Hint`
 
 # License
 

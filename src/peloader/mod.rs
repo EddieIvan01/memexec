@@ -45,7 +45,7 @@ unsafe fn load_pe_into_mem(pe: &PE) -> Result<*const c_void> {
 
     // Step3: handle base relocataion table
     let reloc_entry = &pe.pe_header.nt_header.get_data_directory()[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-    let image_base_offset = base_addr as isize - pe.pe_header.nt_header.get_image_base() as isize;
+    let image_base_offset = base_addr as usize - pe.pe_header.nt_header.get_image_base() as usize;
     if image_base_offset != 0 && reloc_entry.VirtualAddress != 0 && reloc_entry.Size != 0 {
         let mut reloc_table_ptr =
             base_addr.offset(reloc_entry.VirtualAddress as isize) as *const u8;
@@ -62,7 +62,7 @@ unsafe fn load_pe_into_mem(pe: &PE) -> Result<*const c_void> {
                 if (item >> 12) == IMAGE_REL_BASED {
                     let patch_addr = base_addr
                         .offset(reloc_block.VirtualAddress as isize + (item & 0xfff) as isize)
-                        as *mut isize;
+                        as *mut usize;
                     *patch_addr = *patch_addr + image_base_offset;
                 }
             }
@@ -86,13 +86,14 @@ unsafe fn load_pe_into_mem(pe: &PE) -> Result<*const c_void> {
 
             let dll_name = CStr::from_ptr(base_addr.offset(import_desc.Name as isize) as *const i8)
                 .to_str()?;
+            // TODO: implement loading module by calling self recursively
             let hmod = winapi::load_library(dll_name)?;
 
-            // Whether HNT exists
-            let (mut iat_ptr, mut hnt_ptr) = if import_desc.DUMMYUNIONNAME != 0 {
+            // Whether the ILT (called INT in IDA) exists? (some linkers didn't generate the ILT)
+            let (mut iat_ptr, mut ilt_ptr) = if import_desc.OriginalFirstThunk != 0 {
                 (
                     base_addr.offset(import_desc.FirstThunk as isize) as *mut IMAGE_THUNK_DATA,
-                    base_addr.offset(import_desc.DUMMYUNIONNAME as isize)
+                    base_addr.offset(import_desc.OriginalFirstThunk as isize)
                         as *const IMAGE_THUNK_DATA,
                 )
             } else {
@@ -103,32 +104,33 @@ unsafe fn load_pe_into_mem(pe: &PE) -> Result<*const c_void> {
             };
 
             loop {
-                let thunk_data = *hnt_ptr as isize;
+                let thunk_data = *ilt_ptr as isize;
                 if thunk_data == 0 {
                     break;
                 }
 
                 let proc_addr;
-                if thunk_data & IMAGE_ORDINAL_FLAG == IMAGE_ORDINAL_FLAG {
+                if thunk_data & IMAGE_ORDINAL_FLAG != 0 {
                     // Import by ordinal number
                     proc_addr = winapi::get_proc_address_by_ordinal(hmod, thunk_data & 0xffff)?;
                 } else {
-                    let import_by_name = &*mem::transmute::<PVOID, *const IMAGE_IMPORT_BY_NAME>(
+                    // TODO: implement resolving proc address by `IMAGE_IMPORT_BY_NAME.Hint`
+                    let hint_name_table = &*mem::transmute::<PVOID, *const IMAGE_IMPORT_BY_NAME>(
                         base_addr.offset(thunk_data),
                     );
-                    if 0 == import_by_name.Name {
+                    if 0 == hint_name_table.Name {
                         break;
                     }
 
                     proc_addr = winapi::get_proc_address(
                         hmod,
-                        CStr::from_ptr(&import_by_name.Name as _).to_str()?,
+                        CStr::from_ptr(&hint_name_table.Name as _).to_str()?,
                     )?;
                 }
 
                 *iat_ptr = proc_addr as IMAGE_THUNK_DATA;
                 iat_ptr = iat_ptr.offset(1);
-                hnt_ptr = hnt_ptr.offset(1);
+                ilt_ptr = ilt_ptr.offset(1);
             }
         }
     }
@@ -143,7 +145,7 @@ unsafe fn load_pe_into_mem(pe: &PE) -> Result<*const c_void> {
         winapi::nt_protect_vm(
             &(base_addr.offset(section.VirtualAddress as isize)) as _,
             &size as _,
-            section.protect_value(),
+            section.get_protection(),
         )?;
     }
 
@@ -189,16 +191,20 @@ impl ExeLoader {
     pub unsafe fn new(pe: &PE) -> Result<ExeLoader> {
         check_platform(pe)?;
         if pe.is_dll() {
-            Err(Error::MismatchedLoader)
+            return Err(Error::MismatchedLoader);
+        }
+
+        if pe.is_dot_net() {
+            return Err(Error::UnsupportedDotNetExecutable);
+        }
+
+        let entry_point = pe.pe_header.nt_header.get_address_of_entry_point();
+        if entry_point == 0 {
+            Err(Error::NoEntryPoint)
         } else {
-            let entry_point = pe.pe_header.nt_header.get_address_of_entry_point();
-            if entry_point == 0 {
-                Err(Error::NoEntryPoint)
-            } else {
-                Ok(ExeLoader {
-                    entry_point_va: load_pe_into_mem(pe)?.offset(entry_point),
-                })
-            }
+            Ok(ExeLoader {
+                entry_point_va: load_pe_into_mem(pe)?.offset(entry_point),
+            })
         }
     }
 
@@ -215,16 +221,20 @@ impl DllLoader {
     pub unsafe fn new(pe: &PE) -> Result<DllLoader> {
         check_platform(pe)?;
         if !pe.is_dll() {
-            Err(Error::MismatchedLoader)
+            return Err(Error::MismatchedLoader);
+        }
+
+        if pe.is_dot_net() {
+            return Err(Error::UnsupportedDotNetExecutable);
+        }
+
+        let entry_point = pe.pe_header.nt_header.get_address_of_entry_point();
+        if entry_point == 0 {
+            Err(Error::NoEntryPoint)
         } else {
-            let entry_point = pe.pe_header.nt_header.get_address_of_entry_point();
-            if entry_point == 0 {
-                Err(Error::NoEntryPoint)
-            } else {
-                Ok(DllLoader {
-                    entry_point_va: load_pe_into_mem(pe)?.offset(entry_point),
-                })
-            }
+            Ok(DllLoader {
+                entry_point_va: load_pe_into_mem(pe)?.offset(entry_point),
+            })
         }
     }
 

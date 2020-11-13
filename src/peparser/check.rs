@@ -28,8 +28,9 @@ impl<'a> ImageNtHeaders<'a> {
                     return Err(Error::UnsupportedMachine);
                 }
 
+                // 32-bit .NET assembly may not set IMAGE_FILE_32BIT_MACHINE
                 if h.FileHeader.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE == 0
-                    || h.FileHeader.Characteristics & IMAGE_FILE_32BIT_MACHINE == 0
+                //    || h.FileHeader.Characteristics & IMAGE_FILE_32BIT_MACHINE == 0
                 {
                     return Err(Error::InvalidFileHeaderCharacteristics);
                 }
@@ -44,7 +45,7 @@ impl<'a> ImageNtHeaders<'a> {
                 }
 
                 if h.FileHeader.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE == 0
-                    || h.FileHeader.Characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE == 0
+                //    || h.FileHeader.Characteristics & IMAGE_FILE_LARGE_ADDRESS_AWARE == 0
                 {
                     return Err(Error::InvalidFileHeaderCharacteristics);
                 }

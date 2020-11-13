@@ -9,6 +9,7 @@ pub enum Error {
     MismatchedArch,
     MismatchedLoader,
     NoEntryPoint,
+    UnsupportedDotNetExecutable,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

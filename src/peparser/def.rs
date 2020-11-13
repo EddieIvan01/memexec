@@ -12,7 +12,9 @@ pub(crate) const IMAGE_DOS_SIGNATURE: WORD = 0x5a4d;
 pub(crate) const IMAGE_NT_SIGNATURE: DWORD = 0x00004550;
 
 pub(crate) const IMAGE_FILE_EXECUTABLE_IMAGE: WORD = 0x0002; // File is executable  (i.e. no unresolved external references).
+#[allow(dead_code)]
 pub(crate) const IMAGE_FILE_LARGE_ADDRESS_AWARE: WORD = 0x0020; // App can handle >2gb addresses
+#[allow(dead_code)]
 pub(crate) const IMAGE_FILE_32BIT_MACHINE: WORD = 0x0100; // 32 bit word machine.
 pub(crate) const IMAGE_FILE_DLL: WORD = 0x2000; // File is a DLL.
 
@@ -39,10 +41,19 @@ pub(crate) const IMAGE_NUMBEROF_DIRECTORY_ENTRIES: usize = 16;
 
 pub const IMAGE_DIRECTORY_ENTRY_EXPORT: usize = 0; // Export Directory
 pub const IMAGE_DIRECTORY_ENTRY_IMPORT: usize = 1; // Import Directory
+pub const IMAGE_DIRECTORY_ENTRY_RESOURCE: usize = 2; // Resource Directory
+pub const IMAGE_DIRECTORY_ENTRY_EXCEPTION: usize = 3; // Exception Directory
+pub const IMAGE_DIRECTORY_ENTRY_SECURITY: usize = 4; // Security Directory
 pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: usize = 5; // Base Relocation Table
-pub const IMAGE_DIRECTORY_ENTRY_TLS: usize = 9;
+pub const IMAGE_DIRECTORY_ENTRY_DEBUG: usize = 6; // Debug Directory
+pub const IMAGE_DIRECTORY_ENTRY_ARCHITECTURE: usize = 7; // Architecture Specific Data
+pub const IMAGE_DIRECTORY_ENTRY_GLOBALPTR: usize = 8; // RVA of GP
+pub const IMAGE_DIRECTORY_ENTRY_TLS: usize = 9; // TLS Directory
+pub const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: usize = 10; // Load Configuration Directory
+pub const IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT: usize = 11; // Bound Import Directory in headers
 pub const IMAGE_DIRECTORY_ENTRY_IAT: usize = 12; // Import Address Table
 pub const IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: usize = 13; // Delay Load Import Descriptors
+pub const IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR: usize = 14; // COM Runtime descriptor
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
 pub(crate) const IMAGE_REL_BASED_DIR64: WORD = 10;
@@ -255,7 +266,7 @@ struct_wrapper!(
             DWORD   OriginalFirstThunk;         // RVA to original unbound IAT (PIMAGE_THUNK_DATA)
         }
         */
-        DUMMYUNIONNAME: DWORD,
+        OriginalFirstThunk: DWORD,
         TimeDateStamp: DWORD,
         ForwarderChain: DWORD, // -1 if no forwarders
         Name: DWORD,

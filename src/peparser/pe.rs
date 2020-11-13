@@ -43,4 +43,10 @@ impl<'a> PE<'a> {
             ImageNtHeaders::x64(h) => h.FileHeader.Characteristics & IMAGE_FILE_DLL != 0,
         }
     }
+
+    pub fn is_dot_net(&self) -> bool {
+        let dot_net_desc =
+            &self.pe_header.nt_header.get_data_directory()[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR];
+        dot_net_desc.Size != 0 && dot_net_desc.VirtualAddress != 0
+    }
 }

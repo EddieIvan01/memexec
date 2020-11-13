@@ -1,6 +1,3 @@
-//! # memexec
-//! Lib used to load and execute PE (Portable Executable) in memory without ever touching the disk
-
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(overflowing_literals)]
@@ -17,7 +14,7 @@ use std::os::raw::c_void;
 
 pub unsafe fn memexec_exe(bs: &[u8]) -> Result<()> {
     let pe = PE::new(bs)?;
-    let loader = ExeLoader::new(&pe).unwrap();
+    let loader = ExeLoader::new(&pe)?;
     Ok(loader.invoke_entry_point())
 }
 
@@ -28,7 +25,7 @@ pub unsafe fn memexec_dll(
     lp_reserved: *const c_void,
 ) -> Result<bool> {
     let pe = PE::new(bs)?;
-    let loader = DllLoader::new(&pe).unwrap();
+    let loader = DllLoader::new(&pe)?;
     Ok(loader.invoke_entry_point(hmod, reason_for_call, lp_reserved))
 }
 
