@@ -23,7 +23,7 @@ pub fn load_library(lib: &str) -> Result<HMODULE> {
     }
 }
 
-pub fn get_proc_address(hmod: HMODULE, proc_name: &str) -> Result<PVOID> {
+pub fn get_proc_address_by_name(hmod: HMODULE, proc_name: &str) -> Result<PVOID> {
     if let Ok(proc_name) = CString::new(proc_name) {
         let proc = unsafe { GetProcAddress(hmod, proc_name.as_ptr()) };
         if proc == 0 as PVOID {
@@ -71,7 +71,7 @@ pub unsafe fn nt_alloc_vm(
 ) -> Result<()> {
     if p_nt_alloc_vm == 0 as _ {
         p_nt_alloc_vm =
-            get_proc_address(load_library("ntdll.dll")?, "NtAllocateVirtualMemory")? as _;
+            get_proc_address_by_name(load_library("ntdll.dll")?, "NtAllocateVirtualMemory")? as _;
     };
 
     let ret = mem::transmute::<
@@ -119,7 +119,7 @@ pub unsafe fn nt_protect_vm(
 ) -> Result<()> {
     if p_nt_protect_vm == 0 as _ {
         p_nt_protect_vm =
-            get_proc_address(load_library("ntdll.dll")?, "NtProtectVirtualMemory")? as _;
+            get_proc_address_by_name(load_library("ntdll.dll")?, "NtProtectVirtualMemory")? as _;
     };
 
     let old_protect: ULONG = 0;

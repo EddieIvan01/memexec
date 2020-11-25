@@ -267,6 +267,10 @@ struct_wrapper!(
         }
         */
         OriginalFirstThunk: DWORD,
+        // 0 if not bound,
+        // -1 if bound, and real date\time stamp
+        //     in IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT (new BIND)
+        // O.W. date/time stamp of DLL bound to (Old BIND)
         TimeDateStamp: DWORD,
         ForwarderChain: DWORD, // -1 if no forwarders
         Name: DWORD,

@@ -2,7 +2,7 @@
 
 [![](https://img.shields.io/crates/v/memexec)](https://crates.io/crates/memexec) [![](https://img.shields.io/crates/d/memexec?label=downloads%40crates.io&style=social)](https://crates.io/crates/memexec)
 
-A library for loading and executing PE (Portable Executable) without ever touching the disk
+A library for loading and executing PE (Portable Executable) from memory without ever touching the disk
 
 # Features
 
@@ -10,6 +10,7 @@ A library for loading and executing PE (Portable Executable) without ever touchi
 + Cross-architecture, applicable to x86 and x86-64
 + Zero-dependency
 + Contains a simple, zero-copy PE parser submodule
++ Provides an IAT hooking interface
 
 # Install
 
@@ -17,12 +18,12 @@ A library for loading and executing PE (Portable Executable) without ever touchi
 # Cargo.toml
 
 [dependencies]
-memexec = "0.1"
+memexec = "0.2"
 ```
 
 # Usage
 
-## Load and execute
+## Execute from memory
 
 **⚠The architecture of target program must be same as current process, otherwise an error will occur**
 
@@ -35,7 +36,7 @@ use std::io::Read;
 /*                         EXE                             */
 /***********************************************************/
 let mut buf = Vec::new();
-File::open("./mimikatz.exe")
+File::open("./test.exe")
     .unwrap()
     .read_to_end(&mut buf)
     .unwrap();
@@ -43,6 +44,7 @@ File::open("./mimikatz.exe")
 unsafe {
     // If you need to pass command line parameters,
     // try to modify PEB's command line buffer
+    // Or use `memexec_exe_with_hooks` to hook related functions (see below)
     memexec::memexec_exe(&buf).unwrap();
 }
 
@@ -60,6 +62,85 @@ use memexec::peloader::def::DLL_PROCESS_ATTACH;
 unsafe {
     // DLL's entry point is DllMain
     memexec_dll(&buf, 0 as _, DLL_PROCESS_ATTACH, 0 as _).unwrap();
+}
+```
+
+## IAT hooking
+
+Add the `hook` feature in `Cargo.toml`
+
+```toml
+[dependencies]
+memexec = { version="0.2", features=[ "hook" ] }
+```
+
+Hook the `__wgetmainargs` function (see `example/hook.rs`)
+
+```rust
+let mut buf = Vec::new();
+File::open("./test.x64.exe")
+    .unwrap()
+    .read_to_end(&mut buf)
+    .unwrap();
+
+let mut hooks = HashMap::new();
+
+unsafe {
+    hooks.insert(
+        "msvcrt.dll!__wgetmainargs".into(),
+        mem::transmute::<
+            extern "win64" fn(
+                *mut i32,
+                *mut *const *const u16,
+                *const c_void,
+                i32,
+                *const c_void,
+            ) -> i32,
+            *const c_void,
+        >(__wgetmainargs),
+    );
+    memexec::memexec_exe_with_hooks(&buf, &hooks).unwrap();
+}
+```
+
+The definition of `__wgetmainargs` (notice the calling convention on different archtectures):
+
+```rust
+// https://docs.microsoft.com/en-us/cpp/c-runtime-library/getmainargs-wgetmainargs?view=msvc-160
+/*
+int __wgetmainargs (
+   int *_Argc,
+   wchar_t ***_Argv,
+   wchar_t ***_Env,
+   int _DoWildCard,
+   _startupinfo * _StartInfo)
+*/
+#[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+extern "win64" fn __wgetmainargs(
+    _Argc: *mut i32,
+    _Argv: *mut *const *const u16,
+    _Env: *const c_void,
+    _DoWildCard: i32,
+    _StartInfo: *const c_void,
+) -> i32 {
+    unsafe {
+        *_Argc = 2;
+        let a0: Vec<_> = "program_name\0"
+            .chars()
+            .map(|c| (c as u16).to_le())
+            .collect();
+        let a1: Vec<_> = "token::whoami\0"
+            .chars()
+            .map(|c| (c as u16).to_le())
+            .collect();
+        *_Argv = [a0.as_ptr(), a1.as_ptr()].as_ptr();
+
+        // Avoid calling destructor
+        mem::forget(a0);
+        mem::forget(a1);
+    }
+
+    0
 }
 ```
 

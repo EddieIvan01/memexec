@@ -3,7 +3,7 @@ use super::error::{Error, Result};
 use std::mem;
 use std::os::raw::c_void;
 
-// zero copy
+// Zero copy
 #[derive(Debug)]
 pub enum ImageNtHeaders<'a> {
     x86(&'a IMAGE_NT_HEADERS32),
@@ -61,7 +61,7 @@ impl<'a> ImageNtHeaders<'a> {
     }
 }
 
-// zero copy
+// Zero copy
 #[repr(C)]
 #[derive(Debug)]
 pub struct PeHeader<'a> {
