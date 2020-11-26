@@ -72,18 +72,12 @@ impl<'a> From<&'a str> for ProcDesc<'a> {
         match s.find('!') {
             Some(i) => {
                 let (dll, proc_name) = s.split_at(i);
-                ProcDesc {
-                    dll: dll.to_ascii_lowercase(),
-                    thunk: Thunk::Name(&proc_name[1..]),
-                }
+                ProcDesc::new(dll, Thunk::Name(&proc_name[1..]))
             }
             None => match s.find('#') {
                 Some(i) => {
                     let (dll, proc_ord) = s.split_at(i);
-                    ProcDesc {
-                        dll: dll.to_ascii_lowercase(),
-                        thunk: Thunk::Ordinal(proc_ord[1..].parse().unwrap_or(0)),
-                    }
+                    ProcDesc::new(dll, Thunk::Ordinal(proc_ord[1..].parse().unwrap_or(0)))
                 }
                 // Failure case
                 None => ProcDesc {

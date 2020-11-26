@@ -157,16 +157,7 @@ mod tests {
         unsafe {
             hooks.insert(
                 "msvcrt.dll!__wgetmainargs".into(),
-                mem::transmute::<
-                    extern "cdecl" fn(
-                        *mut i32,
-                        *mut *const *const u16,
-                        *const c_void,
-                        i32,
-                        *const c_void,
-                    ) -> i32,
-                    *const c_void,
-                >(__wgetmainargs),
+                mem::transmute::<extern "cdecl" fn(_, _, _, _, _) -> _, _>(__wgetmainargs),
             );
             memexec_exe_with_hooks(&buf, &hooks).unwrap();
         }
@@ -216,16 +207,7 @@ mod tests {
         unsafe {
             hooks.insert(
                 "msvcrt.dll!__wgetmainargs".into(),
-                mem::transmute::<
-                    extern "win64" fn(
-                        *mut i32,
-                        *mut *const *const u16,
-                        *const c_void,
-                        i32,
-                        *const c_void,
-                    ) -> i32,
-                    *const c_void,
-                >(__wgetmainargs),
+                mem::transmute::<extern "win64" fn(_, _, _, _, _) -> _, _>(__wgetmainargs),
             );
             memexec_exe_with_hooks(&buf, &hooks).unwrap();
         }

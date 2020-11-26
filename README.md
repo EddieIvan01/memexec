@@ -74,7 +74,7 @@ Add the `hook` feature in `Cargo.toml`
 memexec = { version="0.2", features=[ "hook" ] }
 ```
 
-Hook the `__wgetmainargs` function (see `example/hook.rs`)
+Hook the `__wgetmainargs` function (see `example/__wgetmainargs_hook.rs`)
 
 ```rust
 let mut buf = Vec::new();
@@ -88,16 +88,7 @@ let mut hooks = HashMap::new();
 unsafe {
     hooks.insert(
         "msvcrt.dll!__wgetmainargs".into(),
-        mem::transmute::<
-            extern "win64" fn(
-                *mut i32,
-                *mut *const *const u16,
-                *const c_void,
-                i32,
-                *const c_void,
-            ) -> i32,
-            *const c_void,
-        >(__wgetmainargs),
+        mem::transmute::<extern "win64" fn(_, _, _, _, _) -> _, _>(__wgetmainargs),
     );
     memexec::memexec_exe_with_hooks(&buf, &hooks).unwrap();
 }
@@ -144,7 +135,7 @@ extern "win64" fn __wgetmainargs(
 }
 ```
 
-## Parse PE
+## PE parser
 
 **PE parser could parse programs which have different architectures from current process**
 
